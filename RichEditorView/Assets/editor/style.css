@@ -59,3 +59,9 @@ div {
     color:#666666;
     font-size: 12pt;
 }
+
+
+/*added by fiona, 写邮件插入图片自适应屏幕功能*/
+img {
+    max-width: 100%;
+}
