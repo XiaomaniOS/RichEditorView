@@ -415,5 +415,5 @@ RE.getRelativeCaretYPosition = function() {
         }
     }
 
-    return y;
+    return parseInt(y);
 };
