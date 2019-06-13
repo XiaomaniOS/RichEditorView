@@ -403,7 +403,7 @@ RE.getRelativeCaretYPosition = function() {
         var needsWorkAround = (range.startOffset == 0)
         /* Removing fixes bug when node name other than 'div' */
         // && range.startContainer.nodeName.toLowerCase() == 'div');
-        if (needsWorkAround) {
+        if (needsWorkAround && typeof range.startContainer.offsetTop === 'number') {
             y = range.startContainer.offsetTop - window.pageYOffset;
         } else {
             if (range.getClientRects) {
@@ -414,6 +414,4 @@ RE.getRelativeCaretYPosition = function() {
             }
         }
     }
-
-    return parseInt(y);
 };
