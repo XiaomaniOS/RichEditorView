@@ -352,22 +352,24 @@ import UIKit
         return string
     }
 
+    @discardableResult
+    public func updateEditorContentHeight() -> CGFloat {
+        updateHeight()
+        return CGFloat(editorHeight)
+    }
 
     // MARK: - Delegate Methods
 
 
     // MARK: UIScrollViewDelegate
-
     public func scrollViewDidScroll(_ scrollView: UIScrollView) {
         // We use this to keep the scroll view from changing its offset when the keyboard comes up
         if !isScrollEnabled {
             scrollView.bounds = webView.bounds
         }
     }
-
-
+    
     // MARK: UIWebViewDelegate
-
     public func webView(_ webView: UIWebView, shouldStartLoadWith request: URLRequest, navigationType: UIWebViewNavigationType) -> Bool {
 
         // Handle pre-defined editor actions
