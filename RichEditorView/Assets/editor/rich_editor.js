@@ -417,3 +417,15 @@ RE.getRelativeCaretYPosition = function() {
 
     return parseInt(y);
 };
+
+RE.elementForClassNameExists = function(name) {
+    //!! coerces a null to bool
+    var elements = document.getElementsByClassName(name);
+    return elements.length > 0;
+};
+
+RE.replaceElementsInnerHTML = function(content, name, index) {
+    //!! coerces a null to bool
+    var elements = document.getElementsByClassName(name);
+    elements[index].innerHTML = content;
+};

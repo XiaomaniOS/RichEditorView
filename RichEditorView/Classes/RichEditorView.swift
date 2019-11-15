@@ -8,32 +8,49 @@
 import UIKit
 
 /// RichEditorDelegate defines callbacks for the delegate of the RichEditorView
-@objc public protocol RichEditorDelegate: class {
+public protocol RichEditorDelegate: class {
 
     /// Called when the inner height of the text being displayed changes
     /// Can be used to update the UI
-    @objc optional func richEditor(_ editor: RichEditorView, heightDidChange height: Int)
+    func richEditor(_ editor: RichEditorView, heightDidChange height: Int)
 
     /// Called whenever the content inside the view changes
-    @objc optional func richEditor(_ editor: RichEditorView, contentDidChange content: String)
+    func richEditor(_ editor: RichEditorView, contentDidChange content: String)
+    
+    func richEditor(_ editor: RichEditorView, didRelativeCaretYPositionChanged y: CGFloat, lineHeight: CGFloat)
 
     /// Called when the rich editor starts editing
-    @objc optional func richEditorTookFocus(_ editor: RichEditorView)
+    func richEditorTookFocus(_ editor: RichEditorView)
+    
+    /// Called when the rich editor starts editing
+    func richEditor(_ editor: RichEditorView, focusAtPoint: CGPoint, caretY y: CGFloat, lineHeight: CGFloat)
     
     /// Called when the rich editor stops editing or loses focus
-    @objc optional func richEditorLostFocus(_ editor: RichEditorView)
+    func richEditorLostFocus(_ editor: RichEditorView)
     
     /// Called when the RichEditorView has become ready to receive input
     /// More concretely, is called when the internal UIWebView loads for the first time, and contentHTML is set
-    @objc optional func richEditorDidLoad(_ editor: RichEditorView)
+    func richEditorDidFinishedLoad(_ editor: RichEditorView)
     
     /// Called when the internal UIWebView begins loading a URL that it does not know how to respond to
     /// For example, if there is an external link, and then the user taps it
-    @objc optional func richEditor(_ editor: RichEditorView, shouldInteractWith url: URL) -> Bool
+    func richEditor(_ editor: RichEditorView, shouldInteractWith url: URL) -> Bool
     
     /// Called when custom actions are called by callbacks in the JS
     /// By default, this method is not used unless called by some custom JS that you add
-    @objc optional func richEditor(_ editor: RichEditorView, handle action: String)
+    func richEditor(_ editor: RichEditorView, handle action: String)
+}
+
+extension RichEditorDelegate {
+    public func richEditor(_ editor: RichEditorView, heightDidChange height: Int) {}
+    public func richEditor(_ editor: RichEditorView, contentDidChange content: String) {}
+    public func richEditor(_ editor: RichEditorView, didRelativeCaretYPositionChanged y: CGFloat, lineHeight: CGFloat ) {}
+    public func richEditorTookFocus(_ editor: RichEditorView) {}
+    public func richEditor(_ editor: RichEditorView, focusAtPoint: CGPoint, caretY y: CGFloat, lineHeight: CGFloat) {}
+    public func richEditorLostFocus(_ editor: RichEditorView) {}
+    public func richEditorDidFinishedLoad(_ editor: RichEditorView) {}
+    public func richEditor(_ editor: RichEditorView, shouldInteractWith url: URL) -> Bool { return false }
+    public func richEditor(_ editor: RichEditorView, handle action: String) {}
 }
 
 /// RichEditorView is a UIView that displays richly styled text, and allows it to be edited in a WYSIWYG fashion.
@@ -71,7 +88,7 @@ import UIKit
     /// Is continually updated as the text is being edited.
     open private(set) var contentHTML: String = "" {
         didSet {
-            delegate?.richEditor?(self, contentDidChange: contentHTML)
+            delegate?.richEditor(self, contentDidChange: contentHTML)
         }
     }
 
@@ -79,13 +96,13 @@ import UIKit
     /// Is continually being updated as the text is edited.
     open private(set) var editorHeight: Int = 0 {
         didSet {
-            delegate?.richEditor?(self, heightDidChange: editorHeight)
+            delegate?.richEditor(self, heightDidChange: editorHeight)
         }
     }
 
     /// The value we hold in order to be able to set the line height before the JS completely loads.
     private var innerLineHeight: Int = 28
-
+    
     /// The line height of the editor. Defaults to 28.
     open private(set) var lineHeight: Int {
         get {
@@ -113,6 +130,8 @@ import UIKit
     /// The private internal tap gesture recognizer used to detect taps and focus the editor
     private let tapRecognizer = UITapGestureRecognizer()
 
+    private var tapPoint: CGPoint?
+    
     /// The inner height of the editor div.
     /// Fetches it from JS every time, so might be slow!
     private var clientHeight: Int {
@@ -334,8 +353,8 @@ import UIKit
         runJS("RE.focus();")
     }
 
-    public func focus(at: CGPoint) {
-        runJS("RE.focusAtPoint(\(at.x), \(at.y));")
+    public func focus(at point: CGPoint) {
+        runJS("RE.focusAtPoint(\(point.x), \(point.y));")
     }
     
     public func blur() {
@@ -400,7 +419,7 @@ import UIKit
         if navigationType == .linkClicked {
             if let
                 url = request.url,
-                let shouldInteract = delegate?.richEditor?(self, shouldInteractWith: url)
+                let shouldInteract = delegate?.richEditor(self, shouldInteractWith: url)
             {
                 return shouldInteract
             }
@@ -418,9 +437,7 @@ import UIKit
         return true
     }
 
-
     // MARK: - Private Implementation Details
-
     private var isContentEditable: Bool {
         get {
             if isEditorLoaded {
@@ -445,7 +462,9 @@ import UIKit
     /// Can also return 0 if some sort of error occurs between JS and here.
     private var relativeCaretYPosition: Int {
         let string = runJS("RE.getRelativeCaretYPosition();")
-        return Int(string) ?? 0
+        let result = Int(string) ?? 0
+        
+        return result
     }
 
     private func updateHeight() {
@@ -461,10 +480,10 @@ import UIKit
     /// Works only if the `lineHeight` of the editor is available.
     private func scrollCaretToVisible() {
         let scrollView = self.webView.scrollView
-        
+
         let contentHeight = clientHeight > 0 ? CGFloat(clientHeight) : scrollView.frame.height
         scrollView.contentSize = CGSize(width: scrollView.frame.width, height: contentHeight)
-        
+
         // XXX: Maybe find a better way to get the cursor height
         let lineHeight = CGFloat(self.lineHeight)
         let cursorHeight = lineHeight - 4
@@ -480,7 +499,6 @@ import UIKit
             var amount = scrollView.contentOffset.y + visiblePosition
             amount = amount < 0 ? 0 : amount
             offset = CGPoint(x: scrollView.contentOffset.x, y: amount)
-
         }
 
         if let offset = offset {
@@ -499,24 +517,31 @@ import UIKit
                 isContentEditable = editingEnabledVar
                 placeholder = placeholderText
                 lineHeight = innerLineHeight
-                delegate?.richEditorDidLoad?(self)
+                delegate?.richEditorDidFinishedLoad(self)
             }
             updateHeight()
         }
         else if method.hasPrefix("input") {
-            scrollCaretToVisible()
+//            scrollCaretToVisible()
+            
             let content = runJS("RE.getHtml()")
             contentHTML = content
             updateHeight()
+            delegate?.richEditor(self, didRelativeCaretYPositionChanged: CGFloat(relativeCaretYPosition), lineHeight: CGFloat(lineHeight))
         }
         else if method.hasPrefix("updateHeight") {
             updateHeight()
         }
         else if method.hasPrefix("focus") {
-            delegate?.richEditorTookFocus?(self)
+            delegate?.richEditorTookFocus(self)
+            let caretY = CGFloat(relativeCaretYPosition)
+            if let point = tapPoint {
+                delegate?.richEditor(self, focusAtPoint: point, caretY: caretY, lineHeight: CGFloat(lineHeight))
+            }
         }
         else if method.hasPrefix("blur") {
-            delegate?.richEditorLostFocus?(self)
+            delegate?.richEditorLostFocus(self)
+            tapPoint = nil
         }
         else if method.hasPrefix("action/") {
             let content = runJS("RE.getHtml()")
@@ -527,7 +552,7 @@ import UIKit
             let actionPrefix = "action/"
             let range = method.range(of: actionPrefix)!
             let action = method.replacingCharacters(in: range, with: "")
-            delegate?.richEditor?(self, handle: action)
+            delegate?.richEditor(self, handle: action)
         }
     }
 
@@ -538,6 +563,9 @@ import UIKit
     @objc private func viewWasTapped() {
         if !webView.containsFirstResponder {
             let point = tapRecognizer.location(in: webView)
+            let tapPointAtEditor = tapRecognizer.location(in: self)
+            let relativeY = tapPointAtEditor.y - (tapPointAtEditor.y.truncatingRemainder(dividingBy: CGFloat(innerLineHeight))) + CGFloat(innerLineHeight)
+            tapPoint = .init(x: 0, y: relativeY)
             focus(at: point)
         }
     }
@@ -555,5 +583,43 @@ import UIKit
         blur()
         return true
     }
+}
 
+// MARK: - Extensions for signature
+extension RichEditorView {
+    func elementExists(forClassName name: String) -> Bool {
+        return runJS("RE.elementForClassNameExists('\(name)');") == "true" ? true : false
+    }
+    
+    public func insertBrTag(with count: Int = 1) {
+        guard count > 0 else { return }
+        runJS("RE.prepareInsert();")
+        let brs = (0..<count).reduce("") { result, _ in result + "<Br>" }
+        runJS("RE.insertHTML('\(brs.escaped)');")
+        updateHeight()
+    }
+    
+    public func insertElement(content: String, withClassName name: String, prefixBrTagCount: Int = 0, suffixBrTagCount: Int = 0) {
+        guard !elementExists(forClassName: name) else {
+            replaceElement(innerHTML: content, ofClassName: name)
+            return
+        }
+        
+        let prefixBrs = (0..<prefixBrTagCount).reduce("") { result, _ in result + "<Br>" }
+        let sufixBrs = (0..<suffixBrTagCount).reduce("") { result, _ in result + "<Br>" }
+        let newAddedContent = prefixBrs + "<div class=\"\(name)\">" + content + "</div>" + sufixBrs
+        runJS("RE.prepareInsert();")
+        runJS("RE.insertHTML('\(newAddedContent.escaped)');")
+        updateHeight()
+    }
+    
+    public func replaceElement(innerHTML html: String, ofClassName name: String, atIndex index: Int = 0) {
+        guard elementExists(forClassName: name) else {
+            insertElement(content: html, withClassName: name, prefixBrTagCount: 2, suffixBrTagCount: 2)
+            return
+        }
+        
+        runJS("RE.replaceElementsInnerHTML('\(html.escaped)', '\(name)', '\(index)');")
+        updateHeight()
+    }
 }
