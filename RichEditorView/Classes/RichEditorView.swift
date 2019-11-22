@@ -587,30 +587,49 @@ extension RichEditorDelegate {
 
 // MARK: - Extensions for signature
 extension RichEditorView {
-    func elementExists(forClassName name: String) -> Bool {
+    private func elementExists(forClassName name: String) -> Bool {
         return runJS("RE.elementForClassNameExists('\(name)');") == "true" ? true : false
+    }
+    
+    private func prepareInsert() {
+        runJS("RE.prepareInsert();")
+    }
+    
+    private func insert(html: String) {
+        prepareInsert()
+        runJS("RE.insertHTML('\(html.escaped)');")
     }
     
     public func insertBrTag(with count: Int = 1) {
         guard count > 0 else { return }
-        runJS("RE.prepareInsert();")
         let brs = (0..<count).reduce("") { result, _ in result + "<Br>" }
-        runJS("RE.insertHTML('\(brs.escaped)');")
+        
+        insert(html: brs.escaped)
         updateHeight()
     }
     
-    public func insertElement(content: String, withClassName name: String, prefixBrTagCount: Int = 0, suffixBrTagCount: Int = 0) {
-        guard !elementExists(forClassName: name) else {
-            replaceElement(innerHTML: content, ofClassName: name)
-            return
-        }
-        
+    /// 插入元素
+    /// - Parameters:
+    ///   - content: 待插入元素的内容（.innerHTML）
+    ///   - name: className
+    ///   - delay: 刷新内容高度的延时
+    ///   - prefixBrTagCount: 待插入元素前面 <Br> 标签个数
+    ///   - suffixBrTagCount: 待插入元素后面 <Br> 标签个数
+    public func insertElement(content: String, withClassName name: String, updateHeightDelay delay: TimeInterval = 0, prefixBrTagCount: Int = 0, suffixBrTagCount: Int = 0) {
         let prefixBrs = (0..<prefixBrTagCount).reduce("") { result, _ in result + "<Br>" }
         let sufixBrs = (0..<suffixBrTagCount).reduce("") { result, _ in result + "<Br>" }
-        let newAddedContent = prefixBrs + "<div class=\"\(name)\">" + content + "</div>" + sufixBrs
-        runJS("RE.prepareInsert();")
-        runJS("RE.insertHTML('\(newAddedContent.escaped)');")
+        let element = prefixBrs + "<div class=\"\(name)\">" + content + "</div>" + sufixBrs
+        
+        focus(at: .zero)
+        insert(html: element)
         updateHeight()
+        focus(at: .zero)
+        
+        if delay > 0 {
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+                self.updateHeight()
+            }
+        }
     }
     
     public func replaceElement(innerHTML html: String, ofClassName name: String, atIndex index: Int = 0) {
