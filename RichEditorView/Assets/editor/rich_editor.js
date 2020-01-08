@@ -424,8 +424,22 @@ RE.elementForClassNameExists = function(name) {
     return elements.length > 0;
 };
 
-RE.replaceElementsInnerHTML = function(content, name, index) {
+RE.replaceElementInnerHTML = function(content, name, index) {
     //!! coerces a null to bool
     var elements = document.getElementsByClassName(name);
     elements[index].innerHTML = content;
+};
+
+RE.replaceElementsClassName = function(name, newName) {
+    //!! coerces a null to bool
+    var matches = document.getElementsByClassName(name);
+    // https://developer.mozilla.org/en-US/docs/Web/API/Element/getElementsByClassName
+    while (matches.length > 0) {
+        matches.item(0).className = newName;
+        if (newName.length == 0) {
+            matches[0].classList.remove();
+        } else {
+            matches[0].classList.remove(newName);
+        }
+    }
 };

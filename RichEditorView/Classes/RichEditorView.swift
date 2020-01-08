@@ -619,7 +619,6 @@ extension RichEditorView {
         let prefixBrs = (0..<prefixBrTagCount).reduce("") { result, _ in result + "<Br>" }
         let sufixBrs = (0..<suffixBrTagCount).reduce("") { result, _ in result + "<Br>" }
         let element = prefixBrs + "<div class=\"\(name)\">" + content + "</div>" + sufixBrs
-        
         focus(at: .zero)
         insert(html: element)
         updateHeight()
@@ -638,7 +637,11 @@ extension RichEditorView {
             return
         }
         
-        runJS("RE.replaceElementsInnerHTML('\(html.escaped)', '\(name)', '\(index)');")
+        runJS("RE.replaceElementInnerHTML('\(html.escaped)', '\(name)', '\(index)');")
         updateHeight()
+    }
+    
+    public func replaceElements(className originName: String, byNewName name: String) {
+        runJS("RE.replaceElementsClassName('\(originName)', '\(name)');")
     }
 }
