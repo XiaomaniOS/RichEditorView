@@ -1,155 +1,78 @@
-RichEditorView
---------------
-[![License: BSD 3](https://img.shields.io/badge/license-BSD3-blue.svg)](./LICENSE.md)
-[![Cocoapods](https://img.shields.io/cocoapods/v/RichEditorView.svg)](http://cocoapods.org/pods/RichEditorView)
-[![Carthage compatible](https://img.shields.io/badge/Carthage-compatible-4BC51D.svg)](https://github.com/Carthage/Carthage)
+# RichEditorView
 
-RichEditorView is a simple, modular, drop-in UIView subclass for Rich Text Editing.
+This is the Swift 5 version of [cjwirth/RichEditorView](https://github.com/cjwirth/RichEditorView) using WKWebView that **added several** awesome functionalities.
 
-Written in Swift 4
+Table of Contents:
+- Usage Instructions
+- Added Features
+- TODO
+- Extra Notes
+- Credits and License
 
-Supports iOS 8+ through Cocoapods or Carthage.
-
-- _Looking for Android? Check out_ [wasabeef/richeditor-android](https://github.com/wasabeef/richeditor-android)
-
-Seen in Action
---------------
-![Demo](./art/Demo.gif)
-
-Just clone the project and open `RichEditorViewSample/RichEditorViewSample.xcworkspace` in Xcode.
-
-Features
---------
-
-![Toolbar Demo](./art/Toolbar.gif)
-
-- [x] Bold
-- [x] Italic
-- [x] Subscript
-- [x] Superscript
-- [x] Strikethrough
-- [x] Underline
-- [x] Justify Left
-- [x] Justify Center
-- [x] Justify Right
-- [x] Heading 1
-- [x] Heading 2
-- [x] Heading 3
-- [x] Heading 4
-- [x] Heading 5
-- [x] Heading 6
-- [x] Undo
-- [x] Redo
-- [x] Ordered List
-- [x] Unordered List
-- [x] Indent
-- [x] Outdent
-- [x] Insert Image
-- [x] Insert Link
-- [x] Text Color
-- [x] Text Background Color
-
-Installation
-------------
-
-#### Cocoapods
-
-If you have Cocoapods installed, you can use Cocoapods to include `RichEditorView` into your project.
-Add the following to your `Podfile`:
-
-```
-pod "RichEditorView"
-use_frameworks!
-```
-
-Note: the `use_frameworks!` is required for pods made in Swift.
-
-#### Carthage
-
-Add the following to your `Cartfile`:
-
-```
-github 'cjwirth/RichEditorView'
-```
-
-Using RichEditorView
---------------------
-
-`RichEditorView` makes no assumptions about how you want to use it in your app. It is a plain `UIView` subclass, so you are free to use it wherever, however you want.
-
-Most basic use:
-
-```
-editor = RichEditorView(frame: self.view.bounds)
-editor.html = "<h1>My Awesome Editor</h1>Now I am editing in <em>style.</em>"
-self.view.addSubview(editor)
-```
-
-### Editing Text
-
-To change the styles of the currently selected text, you just call methods directly on the `RichEditorView`:
-```Swift
-editor.bold()
-editor.italic()
-editor.setTextColor(.red)
-```
-
-If you want to show the editing toolbar `RichEditorToolbar`, you will need to handle displaying it (`KeyboardManager.swift` in the sample project is a good start). But configuring it is as easy as telling it which options you want to enable, and telling it which `RichEditorView` to work on.
-
-```Swift
-let toolbar = RichEditorToolbar(frame: CGRect(x: 0, y: 0, width: 320, height: 44))
-toolbar.options = RichEditorDefaultOption.all
-toolbar.editor = editor // Previously instantiated RichEditorView
-```
-
-Some actions require user feedback (such as select an image, choose a color, etc). In this cases you can conform to the `RichEditorToolbarDelegate` and react to these actions, and maybe display some custom UI. For example, from the sample project, we just select a random color:
-
-```Swift
-private func randomColor() -> UIColor {
-    let colors: [UIColor] = [
-        .red, .orange, .yellow,
-        .green, .blue, .purple
-    ]
-
-    let color = colors[Int(arc4random_uniform(UInt32(colors.count)))]
-    return color
-}
-
-func richEditorToolbarChangeTextColor(toolbar: RichEditorToolbar) {
-    let color = randomColor()
-    toolbar.editor?.setTextColor(color)
-}
-```
-
-#### Advanced Editing
-
-If you need even more flexibility with your options, you can add completely custom actions, by either making an object that conforms the the `RichEditorOption` protocol, or configuring a `RichEditorOptionItem` object, and adding it to the toolbar's options:
-
-```Swift
-let clearAllItem = RichEditorOptionItem(image: UIImage(named: "clear"), title: "Clear") { toolbar in
-    toolbar?.editor?.html = ""
-    return
-}
-toolbar.options = [clearAllItem]
-```
-
-Author
-------
-Caesar Wirth - cjwirth@gmail.com
-
-<a href="http://www.twitter.com/cjwirth">
-<img src="https://g.twimg.com/Twitter_logo_blue.png" width="50px" alt="@cjwirth on Twitter">
-@cjwirth
-</a>
-
-
-Acknowledgements
-----------------
-
-* [wasabeef/richeditor-android](https://github.com/wasabeef/richeditor-android) - Android version of this library (Apache v2)
-* [nnhubbard/ZSSRichTextEditor](https://github.com/nnhubbard/ZSSRichTextEditor) - Inspiration and Icons (MIT)
-
-License
 -------
 
-RichEditorView is released under the BSD 3-Clause License. See [LICENSE.md](./LICENSE.md) for details.
+### Usage Instructions:
+
+1. In order to import the RichEditorView package, you need to create a new group/folder by going to the bottom left of XCode and clicking on the + button. Create a new group called RichEditorView. 
+2. Then, manually create new files and copy and paste accordingly from the RichEditorView directory in the source code. _There is currently no plan to go to CocoaPods or Carthage or any other package manager._ 
+3. For resources, if you download this repository via ZIP and then unzip the file, you can right click on YOUR newly created Resources directory and selecting "Add Files to" then select the Resource files from the unzipped package. DO NOT USE Assets!!!
+
+No unit testing is included here. You can find it in cjwirth/RichEditorView
+
+---
+
+### Added Features:
+
+Most features are the same from the [parent repo](https://github.com/cjwirth/RichEditorView), but I have added some other functionalities and some directions in the sample. Other features can be found in cjwirth's repo.
+
+- Checkbox
+- Offline & Server-based Image and Video functionality
+- Tables ([with editing functionality](https://github.com/YoomamaFTW/RichEditorView/pull/5#issuecomment-592952190))
+
+The following edited features assumes you have a property `let editorView = RichEditorView()`
+
+1. You can get selected text by doing `editorView.getSelectedText`
+2. runJS and other functions in the RichEditorView does NOT work like cjwirth's. This is due to the JavaScript bridging for WKWebView; unlike WK, UIWebView had a string be returned. In order to run JavaScript and other functionalities return `Void`, you must do the following:
+```
+editorView.getSelectedText() { r in
+    // r is just a variable.
+}
+```
+or 
+```
+editorView.runJS("document.getElementById('editor')") { r in 
+    print(r)
+}
+```
+**NOTE That these might run asynchronously. This might be due to WKWebView's memory efficiency feature. Don't quote me on that though, since I'm not too sure if that's true. Just an observation.**
+This is because the function is: `public func getSelectedText(handler: @escaping (String) -> Void)`. Notice the `(String) -> Void`. The variable `r` is the string value returned by JavaScript.
+
+3. The insertLink functionality has also changed. Normal <a> tags in HTML are layed out like this: `<a href="https://github.com/" title="GitHub">The TEXT that user sees</a>`. When you insert a link, the following arguments are required: href and text. **If there is a range selection, the text in the range selection will be cleared!**
+4. Dark mode is included via the CSS and HTML files.
+
+---
+
+### TODO
+
+- Certain issue if your frame is not set to the view controller's view's width. Recommend using additionalSafeAreaInsets ~~There is an issue with the CSS expanding on user initially clicking the editor's view~~
+- Find someone to maintain Pod and Carthage package
+- Separate iOS 12.X and iOS >13.X packages
+- Refactor toolbar for iOS 12.X
+
+---
+
+### Extra Notes
+
+- Up to iOS 13.3 (current), there is still no fix to `[Process] kill() returned unexpected error 1`. Well, there technically is, but Apple won't release it. Check out the SO conversation here: https://stackoverflow.com/questions/58321114/why-i-get-the-console-warning-process-kill-returned-unexpected-error-1-when
+
+---
+
+### Credits and License
+
+License is under BSD-3 Clause
+
+cjwirth - Original iOS-RichEditorView Creator
+
+C. Bess - WKWebView Support
+
+YoomamaFTW - Repository Maintainer

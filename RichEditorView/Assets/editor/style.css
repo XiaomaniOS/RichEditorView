@@ -16,6 +16,10 @@
 
 @charset "UTF-8";
 
+:root {
+    color-scheme: light dark;
+}
+
 html {
     height: 100%;
 }
@@ -23,9 +27,10 @@ html {
 body {
     min-height: 100%;
     overflow: auto;
+    font: -apple-system-body;
 }
 
-body, h1, p {
+body, h1, p, ul, ol {
     margin: 0;
 }
 
@@ -43,6 +48,11 @@ div {
     outline: 0px solid transparent;
 }
 
+@media (prefers-color-scheme: dark) {
+    body, #editor {
+    }
+}
+
 .placeholder[placeholder]:after {
     content: attr(placeholder);
     position: absolute;
@@ -55,13 +65,40 @@ div {
     height: 100%;
     overflow: auto;
     display: block;
-    font-family: 'HelveticaNeue';
-    color:#2A2A2A;
+    color: #2A2A2A;
     font-size: 12pt;
 }
 
+input[type=checkbox] {
+    transform: scale(1.4);
+    margin-right: 9px;
+}
 
-/*added by fiona, 写邮件插入图片自适应屏幕功能*/
+video {
+    width: 100%  !important;
+    height: auto !important;
+}
+
+/* added by fiona, 写邮件插入图片自适应屏幕功能 */
 img {
     max-width: 100%;
+}
+
+table {
+    overflow-x: scroll;
+}
+
+th, td {
+    max-width: 200px;
+    min-width:50px;
+}
+
+table, td, th {
+    border-collapse: collapse;
+    border: 1px solid #777;
+}
+
+td {
+    padding: 5px 10px;
+    height: 35px;
 }
