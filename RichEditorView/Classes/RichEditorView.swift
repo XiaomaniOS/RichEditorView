@@ -110,12 +110,13 @@ public class RichEditorWebView: WKWebView {
         
     /// The HTML that is currently loaded in the editor view, if it is loaded. If it has not been loaded yet, it is the
     /// HTML that will be loaded into the editor view once it finishes initializing.
+    /// 无值（不建议使用）
     public var html: String = "" {
         didSet {
             setHTML(html)
         }
     }
-    
+
     /// Private variable that holds the placeholder text, so you can set the placeholder before the editor loads.
     private var placeholderText: String = ""
     /// The placeholder text that should be shown when there is no user input.
@@ -658,7 +659,7 @@ extension RichEditorView {
         runJS("RE.prepareInsert();")
     }
     
-    private func insert(html: String) {
+    public func insert(html: String) {
         prepareInsert()
         runJS("RE.insertHTML('\(html.escaped)');")
     }
