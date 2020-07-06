@@ -702,7 +702,7 @@ extension RichEditorView {
             guard let self = self else { return }
             
             if exist {
-				self.runJS("RE.replaceElementInnerHTML('\(html.escaped)', '\(name)', '\(index)');") {
+				self.runJS("RE.replaceElementInnerHTML('\(html.escaped)', '\(name)', '\(index)');") { _ in
 					self.runJS("RE.getHtml()") { content in
 						self.contentHTML = content
 						self.updateHeight()
