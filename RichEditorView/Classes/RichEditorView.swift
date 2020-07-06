@@ -114,6 +114,7 @@ public class RichEditorWebView: WKWebView {
     public var html: String = "" {
         didSet {
             setHTML(html)
+			contentHTML = html
         }
     }
 
@@ -701,8 +702,12 @@ extension RichEditorView {
             guard let self = self else { return }
             
             if exist {
-                self.runJS("RE.replaceElementInnerHTML('\(html.escaped)', '\(name)', '\(index)');")
-                self.updateHeight()
+				self.runJS("RE.replaceElementInnerHTML('\(html.escaped)', '\(name)', '\(index)');") {
+					self.runJS("RE.getHtml()") { content in
+						self.contentHTML = content
+						self.updateHeight()
+					}
+				}
             } else {
                 self.insertElement(content: html, withClassName: name, prefixBrTagCount: 2, suffixBrTagCount: 2)
             }
