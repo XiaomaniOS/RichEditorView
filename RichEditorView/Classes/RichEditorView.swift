@@ -527,12 +527,14 @@ public class RichEditorWebView: WKWebView {
         }
     }
     
-    private func updateHeight() {
+    private func updateHeight(completion: (() -> Void)? = nil) {
         runJS("document.getElementById('editor').clientHeight") { heightString in
             let height = Int(heightString) ?? 0
             if self.editorHeight != height {
                 self.editorHeight = height
             }
+			
+			completion?()
         }
     }
     
@@ -660,9 +662,11 @@ extension RichEditorView {
         runJS("RE.prepareInsert();")
     }
     
-    public func insert(html: String) {
+	public func insert(html: String, completion: (() -> Void)? = nil) {
         prepareInsert()
-        runJS("RE.insertHTML('\(html.escaped)');")
+		runJS("RE.insertHTML('\(html.escaped)');") { _ in
+			completion?()
+		}
     }
     
     public func insertBrTag(with count: Int = 1) {
@@ -680,20 +684,23 @@ extension RichEditorView {
     ///   - delay: 刷新内容高度的延时
     ///   - prefixBrTagCount: 待插入元素前面 <Br> 标签个数
     ///   - suffixBrTagCount: 待插入元素后面 <Br> 标签个数
-    public func insertElement(content: String, withClassName name: String, updateHeightDelay delay: TimeInterval = 0, prefixBrTagCount: Int = 0, suffixBrTagCount: Int = 0) {
+    public func insertElement(
+		content: String,
+		withClassName name: String,
+		prefixBrTagCount: Int = 0,
+		suffixBrTagCount: Int = 0
+	) {
         let prefixBrs = (0..<prefixBrTagCount).reduce("") { result, _ in result + "<Br>" }
         let sufixBrs = (0..<suffixBrTagCount).reduce("") { result, _ in result + "<Br>" }
         let element = prefixBrs + "<div class=\"\(name)\">" + content + "</div>" + sufixBrs
-        focus(at: .zero)
-        insert(html: element)
-        updateHeight()
+		
         focus(at: .zero)
         
-        if delay > 0 {
-            DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
-                self.updateHeight()
-            }
-        }
+		let firstInsert = prefixBrs + "<div class=\"\(name)\">" + "</div>" + sufixBrs
+		
+		insert(html: firstInsert) {
+			self.replaceElement(innerHTML: content, ofClassName: name)
+		}
     }
     
     public func replaceElement(innerHTML html: String, ofClassName name: String, atIndex index: Int = 0) {
