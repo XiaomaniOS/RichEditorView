@@ -135,6 +135,7 @@ public class RichEditorWebView: WKWebView {
     
     public override init(frame: CGRect) {
         webView = RichEditorWebView()
+		webView.keyboardDisplayRequiresUserAction = false
         super.init(frame: frame)
         setup()
     }
@@ -170,7 +171,8 @@ public class RichEditorWebView: WKWebView {
     }
     
     // MARK: - Rich Text Editing
-    
+    public typealias VoidClosure = () -> Void
+	
     open func isEditingEnabled(handler: @escaping (Bool) -> Void) {
         isContentEditable(handler: handler)
     }
@@ -261,8 +263,8 @@ public class RichEditorWebView: WKWebView {
         runJS("RE.removeFormat()")
     }
     
-    public func setFontSize(_ size: Int) {
-        runJS("RE.setFontSize('\(size)px')")
+	public func setFontSize(_ size: Int, _ completion: VoidClosure? = nil) {
+		runJS("RE.setFontSize('\(size)px')") { _ in completion?() }
     }
     
     public func setEditorBackgroundColor(_ color: UIColor) {
@@ -301,9 +303,10 @@ public class RichEditorWebView: WKWebView {
         runJS("RE.setUnderline()")
     }
     
-    public func setTextColor(_ color: UIColor) {
-        runJS("RE.prepareInsert()")
-        runJS("RE.setTextColor('\(color.hex)')")
+    public func setTextColor(_ color: UIColor, _ completion: VoidClosure? = nil) {
+		prepareInsert() {
+			self.runJS("RE.setTextColor('\(color.hex)')") { _ in completion?() }
+		}
     }
     
     public func setEditorFontColor(_ color: UIColor) {
@@ -378,12 +381,14 @@ public class RichEditorWebView: WKWebView {
         runJS("RE.insertLink('\(href.escaped)', '\(text.escaped)', '\(title.escaped)')")
     }
     
-    public func focus() {
-        runJS("RE.focus()")
+    public func focus(completion: VoidClosure? = nil) {
+		runJS("RE.focus()") { _ in completion?() }
     }
     
-    public func focus(at: CGPoint) {
-        runJS("RE.focusAtPoint(\(at.x), \(at.y))")
+    public func focus(at: CGPoint, completion: VoidClosure? = nil) {
+		runJS("RE.focusAtPoint(\(at.x), \(at.y))") { _ in
+			completion?()
+		}
     }
     
     public func blur() {
@@ -651,21 +656,21 @@ public class RichEditorWebView: WKWebView {
 
 // MARK: - Extensions for signature
 extension RichEditorView {
-    
     private func elementExists(forClassName name: String, handler: @escaping (Bool) -> Void) {
         runJS("RE.elementForClassNameExists('\(name)');") { r in
             handler(r == "true")
         }
     }
     
-    private func prepareInsert() {
-        runJS("RE.prepareInsert();")
+	private func prepareInsert(_ completion: VoidClosure? = nil) {
+		runJS("RE.prepareInsert();") { _ in completion?() }
     }
     
-	public func insert(html: String, completion: (() -> Void)? = nil) {
-        prepareInsert()
-		runJS("RE.insertHTML('\(html.escaped)');") { _ in
-			completion?()
+	public func insert(html: String, completion: VoidClosure? = nil) {
+		prepareInsert() {
+			self.runJS("RE.insertHTML('\(html.escaped)');") { _ in
+				completion?()
+			}
 		}
     }
     
@@ -676,47 +681,90 @@ extension RichEditorView {
         insert(html: brs.escaped)
         updateHeight()
     }
-    
-    /// 插入元素
-    /// - Parameters:
-    ///   - content: 待插入元素的内容（.innerHTML）
-    ///   - name: className
-    ///   - delay: 刷新内容高度的延时
-    ///   - prefixBrTagCount: 待插入元素前面 <Br> 标签个数
-    ///   - suffixBrTagCount: 待插入元素后面 <Br> 标签个数
+
+	/// 插入元素
+	/// - Parameters:
+	///   - content: 待插入元素的内容（.innerHTML）
+	///   - name: className
+	///   - delay: 刷新内容高度的延时
+	///   - prefixBrTagCount: 待插入元素前面 <Br> 标签个数
+	///   - suffixBrTagCount: 待插入元素后面 <Br> 标签个数
+	///   - insertAndReplace: 先插入再替换（只会用再签名的插入，签名第一次插入会修改签名块的style，未知错误）
+	///   - completion: 插入结束的回调
     public func insertElement(
 		content: String,
 		withClassName name: String,
 		prefixBrTagCount: Int = 0,
-		suffixBrTagCount: Int = 0
+		suffixBrTagCount: Int = 0,
+		insertAndReplace flag: Bool = false,
+		completion: @escaping VoidClosure
 	) {
         let prefixBrs = (0..<prefixBrTagCount).reduce("") { result, _ in result + "<Br>" }
         let sufixBrs = (0..<suffixBrTagCount).reduce("") { result, _ in result + "<Br>" }
-        let element = prefixBrs + "<div class=\"\(name)\">" + content + "</div>" + sufixBrs
-		
-        focus(at: .zero)
         
-		let firstInsert = prefixBrs + "<div class=\"\(name)\">" + "</div>" + sufixBrs
-		
-		insert(html: firstInsert) {
-			self.replaceElement(innerHTML: content, ofClassName: name)
+		focus(at: .zero) {
+			if flag {
+				self.insert(html: prefixBrs + "<div class=\"\(name)\">" + "</div>" + sufixBrs) {
+					self.replaceElement(innerHTML: content, ofClassName: name, completion: completion)
+				}
+			} else {
+				let element = prefixBrs + "<div class=\"\(name)\">" + content + "</div>" + sufixBrs
+				self.insert(html: element, completion: completion)
+			}
 		}
     }
+	
+	private func refreshContentAndHeight(_ completion: @escaping VoidClosure) {
+		self.runJS("RE.getHtml()") { content in
+			self.contentHTML = content
+			self.updateHeight()
+			completion()
+		}
+	}
+	
+	public func replaceElement(
+		innerHTML html: String,
+		ofClassName name: String,
+		atIndex index: Int = 0,
+		completion: @escaping VoidClosure
+	) {
+		elementExists(forClassName: name, handler: { [weak self] exist in
+			guard let self = self, exist else {
+				completion()
+				return
+			}
+			
+			self.runJS("RE.replaceElementInnerHTML('\(html.escaped)', '\(name)', '\(index)');") { _ in
+				self.refreshContentAndHeight(completion)
+			}
+		})
+	}
     
-    public func replaceElement(innerHTML html: String, ofClassName name: String, atIndex index: Int = 0) {
+    public func insertOrReplaceElement(
+		innerHTML html: String,
+		ofClassName name: String,
+		atIndex index: Int = 0,
+		completion: @escaping VoidClosure
+	) {
         
         elementExists(forClassName: name, handler: { [weak self] exist in
             guard let self = self else { return }
             
             if exist {
-				self.runJS("RE.replaceElementInnerHTML('\(html.escaped)', '\(name)', '\(index)');") { _ in
-					self.runJS("RE.getHtml()") { content in
-						self.contentHTML = content
-						self.updateHeight()
-					}
-				}
+				self.replaceElement(
+					innerHTML: html,
+					ofClassName: name,
+					atIndex: index,
+					completion: completion
+				)
             } else {
-                self.insertElement(content: html, withClassName: name, prefixBrTagCount: 2, suffixBrTagCount: 2)
+                self.insertElement(
+					content: html,
+					withClassName: name,
+					prefixBrTagCount: 2,
+					suffixBrTagCount: 2,
+					completion: completion
+				)
             }
         })
     }
@@ -724,4 +772,73 @@ extension RichEditorView {
     public func replaceElements(className originName: String, byNewName name: String) {
         runJS("RE.replaceElementsClassName('\(originName)', '\(name)');")
     }
+}
+
+typealias OldClosureType =  @convention(c) (Any, Selector, UnsafeRawPointer, Bool, Bool, Any?) -> Void
+typealias NewClosureType =  @convention(c) (Any, Selector, UnsafeRawPointer, Bool, Bool, Bool, Any?) -> Void
+
+extension WKWebView{
+	var keyboardDisplayRequiresUserAction: Bool? {
+		get {
+			return self.keyboardDisplayRequiresUserAction
+		}
+		set {
+			self.setKeyboardRequiresUserInteraction(newValue ?? true)
+		}
+	}
+	
+	func setKeyboardRequiresUserInteraction( _ value: Bool) {
+		guard let WKContentView: AnyClass = NSClassFromString("WKContentView") else {
+			print("keyboardDisplayRequiresUserAction extension: Cannot find the WKContentView class")
+			return
+		}
+		// For iOS 10, *
+		let sel_10: Selector = sel_getUid("_startAssistingNode:userIsInteracting:blurPreviousNode:userObject:")
+		// For iOS 11.3, *
+		let sel_11_3: Selector = sel_getUid("_startAssistingNode:userIsInteracting:blurPreviousNode:changingActivityState:userObject:")
+		// For iOS 12.2, *
+		let sel_12_2: Selector = sel_getUid("_elementDidFocus:userIsInteracting:blurPreviousNode:changingActivityState:userObject:")
+		// For iOS 13.0, *
+		let sel_13_0: Selector = sel_getUid("_elementDidFocus:userIsInteracting:blurPreviousNode:activityStateChanges:userObject:")
+		
+		if let method = class_getInstanceMethod(WKContentView, sel_10) {
+			let originalImp: IMP = method_getImplementation(method)
+			let original: OldClosureType = unsafeBitCast(originalImp, to: OldClosureType.self)
+			let block : @convention(block) (Any, UnsafeRawPointer, Bool, Bool, Any?) -> Void = { (me, arg0, arg1, arg2, arg3) in
+				original(me, sel_10, arg0, !value, arg2, arg3)
+			}
+			let imp: IMP = imp_implementationWithBlock(block)
+			method_setImplementation(method, imp)
+		}
+		
+		if let method = class_getInstanceMethod(WKContentView, sel_11_3) {
+			let originalImp: IMP = method_getImplementation(method)
+			let original: NewClosureType = unsafeBitCast(originalImp, to: NewClosureType.self)
+			let block : @convention(block) (Any, UnsafeRawPointer, Bool, Bool, Bool, Any?) -> Void = { (me, arg0, arg1, arg2, arg3, arg4) in
+				original(me, sel_11_3, arg0, !value, arg2, arg3, arg4)
+			}
+			let imp: IMP = imp_implementationWithBlock(block)
+			method_setImplementation(method, imp)
+		}
+		
+		if let method = class_getInstanceMethod(WKContentView, sel_12_2) {
+			let originalImp: IMP = method_getImplementation(method)
+			let original: NewClosureType = unsafeBitCast(originalImp, to: NewClosureType.self)
+			let block : @convention(block) (Any, UnsafeRawPointer, Bool, Bool, Bool, Any?) -> Void = { (me, arg0, arg1, arg2, arg3, arg4) in
+				original(me, sel_12_2, arg0, !value, arg2, arg3, arg4)
+			}
+			let imp: IMP = imp_implementationWithBlock(block)
+			method_setImplementation(method, imp)
+		}
+		
+		if let method = class_getInstanceMethod(WKContentView, sel_13_0) {
+			let originalImp: IMP = method_getImplementation(method)
+			let original: NewClosureType = unsafeBitCast(originalImp, to: NewClosureType.self)
+			let block : @convention(block) (Any, UnsafeRawPointer, Bool, Bool, Bool, Any?) -> Void = { (me, arg0, arg1, arg2, arg3, arg4) in
+				original(me, sel_13_0, arg0, !value, arg2, arg3, arg4)
+			}
+			let imp: IMP = imp_implementationWithBlock(block)
+			method_setImplementation(method, imp)
+		}
+	}
 }
