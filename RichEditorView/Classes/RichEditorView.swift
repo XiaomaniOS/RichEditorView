@@ -406,11 +406,11 @@ public class RichEditorWebView: WKWebView {
     }
     
     /// Checks if cursor is in a table element. If so, return true so that you can add menu items accordingly.
-    public func isCursorInTable() {
-        runJS("RE.isCursorInTable") { r in
-            return r
-        }
-    }
+	public func isCursorInTable(handler: @escaping (Bool) -> Void) {
+		runJS("RE.isCursorInTable") { r in
+			handler(r == "true")
+		}
+	}
     
     public func addRowToTable() { runJS("RE.addRowToTable()") }
     public func deleteRowFromTable() { runJS("RE.deleteRowFromTable()") }
