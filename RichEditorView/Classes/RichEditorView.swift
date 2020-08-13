@@ -717,7 +717,9 @@ extension RichEditorView {
 	private func refreshContentAndHeight(_ completion: @escaping VoidClosure) {
 		self.runJS("RE.getHtml()") { content in
 			self.contentHTML = content
-			self.updateHeight()
+			DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+				self.updateHeight()
+			}
 			completion()
 		}
 	}
@@ -769,8 +771,14 @@ extension RichEditorView {
         })
     }
     
-    public func replaceElements(className originName: String, byNewName name: String) {
-        runJS("RE.replaceElementsClassName('\(originName)', '\(name)');")
+    public func replaceElements(
+		className originName: String,
+		byNewName name: String,
+		completion: VoidClosure? = nil
+	) {
+		runJS("RE.replaceElementsClassName('\(originName)', '\(name)');") { _ in
+			completion?()
+		}
     }
 }
 
