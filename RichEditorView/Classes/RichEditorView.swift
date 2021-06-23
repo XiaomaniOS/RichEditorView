@@ -263,8 +263,14 @@ public class RichEditorWebView: WKWebView {
         runJS("RE.removeFormat()")
     }
     
+    /// 设置编辑器内所有文本字体大小
 	public func setFontSize(_ size: Int, _ completion: VoidClosure? = nil) {
 		runJS("RE.setFontSize('\(size)px')") { _ in completion?() }
+    }
+    
+    /// 设置选中文本或新增文本字体大小（小/中/大 = 1/3/5）
+    public func setFontSizeSelect(size number: Int, _ completion: VoidClosure? = nil) {
+        runJS("RE.setFontSizeSelect('\(number)')") { _ in completion?() }
     }
     
     public func setEditorBackgroundColor(_ color: UIColor) {
