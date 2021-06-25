@@ -37,6 +37,9 @@ import WebKit
 
     /// 光标位置更新代理
     @objc optional func richEditor(_ editor: RichEditorView, didRelativeCaretYPositionChanged y: CGFloat, lineHeight: CGFloat)
+    
+    /// 获取到当前文本样式
+    @objc optional func richEditor(_ editor: RichEditorView, queryStyle dict: [String: Any])
 }
 
 /// The value we hold in order to be able to set the line height before the JS completely loads.
@@ -356,6 +359,10 @@ public class RichEditorWebView: WKWebView {
         runJS("RE.setJustifyCenter()")
     }
     
+    public func alignCenterAuto() {
+        runJS("RE.setJustifyCenterAuto()")
+    }
+    
     public func alignRight() {
         runJS("RE.setJustifyRight()")
     }
@@ -428,27 +435,32 @@ public class RichEditorWebView: WKWebView {
     /// - parameter js: The JavaScript string to be run
     /// - returns: The result of the JavaScript that was run
     public func runJS(_ js: String, handler: ((String) -> Void)? = nil) {
-        webView.evaluateJavaScript(js) {(result, error) in
+        webView.evaluateJavaScript(js) { [weak self] (result, error) in
             if let error = error {
                 print("WKWebViewJavascriptBridge Error: \(String(describing: error)) - JS: \(js)")
                 handler?("")
                 return
             }
             
-            guard let handler = handler else { return }
-            if let resultBool = result as? Bool {
-                handler(resultBool ? "true" : "false")
-                return
+            if let handler = handler {
+                if let resultBool = result as? Bool {
+                    handler(resultBool ? "true" : "false")
+                    return
+                }
+                if let resultInt = result as? Int {
+                    handler("\(resultInt)")
+                    return
+                }
+                if let resultStr = result as? String {
+                    handler(resultStr)
+                    return
+                }
+                handler("") // no result
+            } else if let resultStr = result as? [String: Any],
+                      resultStr["boldButtonState"] != nil,
+                      let self = self {
+                self.delegate?.richEditor?(self, queryStyle: resultStr)
             }
-            if let resultInt = result as? Int {
-                handler("\(resultInt)")
-                return
-            }
-            if let resultStr = result as? String {
-                handler(resultStr)
-                return
-            }
-            handler("") // no result
         }
     }
     
@@ -585,6 +597,10 @@ public class RichEditorWebView: WKWebView {
         })
     }
     
+    private func queryStyle() {
+        runJS("RE.queryStyle()")
+    }
+    
     /// Called when actions are received from JavaScript
     /// - parameter method: String with the name of the method and optional parameters that were passed in
     private func performCommand(_ method: String) {
@@ -611,15 +627,20 @@ public class RichEditorWebView: WKWebView {
                     self.delegate?.richEditor?(self, didRelativeCaretYPositionChanged: CGFloat(position), lineHeight: CGFloat(self.lineHeight))
                 }
             }
+            queryStyle()
         }
         else if method.hasPrefix("updateHeight") {
             updateHeight()
         }
         else if method.hasPrefix("focus") {
             delegate?.richEditorTookFocus?(self)
+            queryStyle()
         }
         else if method.hasPrefix("blur") {
             delegate?.richEditorLostFocus?(self)
+        }
+        else if method.hasPrefix("touchend") {
+            queryStyle()
         }
         else if method.hasPrefix("action/") {
             runJS("RE.getHtml()") { content in

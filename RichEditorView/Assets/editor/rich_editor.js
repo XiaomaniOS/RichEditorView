@@ -51,12 +51,14 @@ RE.selectedText = function() {
     return "";
 };
 
+// 监听输入
 RE.editor.addEventListener("input", function() {
     RE.updatePlaceholder();
     RE.backuprange();
     RE.callback("input");
 });
 
+// 监听聚焦
 RE.editor.addEventListener("focus", function() {
     RE.backuprange();
     RE.callback("focus");
@@ -64,6 +66,10 @@ RE.editor.addEventListener("focus", function() {
 
 RE.editor.addEventListener("blur", function() {
     RE.callback("blur");
+});
+
+RE.editor.addEventListener("touchend", function() {
+    RE.callback("touchend");
 });
 
 RE.customAction = function(action) {
@@ -253,6 +259,14 @@ RE.setJustifyCenter = function() {
 
 RE.setJustifyRight = function() {
     document.execCommand('justifyRight', false, null);
+};
+
+RE.setJustifyCenterAuto = function() {
+    if(document.queryCommandState('justifycenter')) {
+        document.execCommand('justifyLeft', false, null);
+    } else {
+        document.execCommand('justifyCenter', false, null);
+    }
 };
 
 RE.getLineHeight = function() {
@@ -535,4 +549,22 @@ RE.replaceElementsClassName = function(name, newName) {
 
 window.onload = function() {
     RE.callback("ready");
+};
+
+RE.queryStyle = function() {
+    
+    const boldButtonState = document.queryCommandState('bold');
+    var listButtonState = document.queryCommandState('insertOrderedList');
+    const fontSize = document.queryCommandValue('fontSize');
+    const foreColor = document.queryCommandValue('foreColor');
+    const centerButtonState = document.queryCommandState('justifycenter');
+    
+    const style = {
+        boldButtonState : boldButtonState,
+        listButtonState : listButtonState,
+        fontSize : fontSize,
+        foreColor : foreColor,
+        centerButtonState : centerButtonState
+    }
+    return style;
 };
