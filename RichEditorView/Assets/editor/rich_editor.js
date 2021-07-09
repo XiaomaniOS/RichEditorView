@@ -554,14 +554,14 @@ window.onload = function() {
 RE.queryStyle = function() {
     
     const boldButtonState = document.queryCommandState('bold');
-    var listButtonState = document.queryCommandState('insertOrderedList');
+    var unorderButtonState = document.queryCommandState('insertUnorderedList');
     const fontSize = document.queryCommandValue('fontSize');
     const foreColor = document.queryCommandValue('foreColor');
     const centerButtonState = document.queryCommandState('justifycenter');
     
     const style = {
         boldButtonState : boldButtonState,
-        listButtonState : listButtonState,
+        unorderButtonState : unorderButtonState,
         fontSize : fontSize,
         foreColor : foreColor,
         centerButtonState : centerButtonState
